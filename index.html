@@ -376,7 +376,15 @@ let tt; function showToast(a,b){const t=$("toast");t.textContent=a;const s=docum
 const cv=$("c"), cx=cv.getContext("2d"), stage=$("stage");
 let W=0,H=0;
 function resize(){const dpr=Math.min(devicePixelRatio||1,2);W=stage.clientWidth;H=stage.clientHeight;cv.width=W*dpr;cv.height=H*dpr;cx.setTransform(dpr,0,0,dpr,0,0);}
-addEventListener("resize",resize); resize();
+addEventListener("resize",()=>{resize();zones();}); resize();
+/* Geniş ekranda fidanlar panellerin arkasına düşmesin: görünür bölgeyi hesapla */
+let Z=null;
+function zones(){
+  if(innerWidth<1000){Z=null;return;}
+  const side=document.querySelector(".side").getBoundingClientRect(), card=document.querySelector(".count-card").getBoundingClientRect();
+  Z={sideL:Math.max(W*.4,side.left-12), cardR:card.right+12, cardT:card.top};
+}
+setInterval(zones,1500);
 const imB=new Image(), imG=new Image(); imB.src=BG.b; imG.src=BG.g;
 function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
 let slots=[], NSLOT=0;
@@ -415,7 +423,10 @@ function frame(t){
     for(const i of list){
       const sl=slots[i]; if(!sl.born) sl.born=t;
       let gr=reduce?1:Math.min(1,(t-sl.born)/900); gr=1-Math.pow(1-gr,3);
-      const x=sl.x*W, h0=hzAt(g,x)+H*.03, y=h0+(.04+.96*sl.d)*(H-h0), sc=(.28+sl.d*.95)*k*(W<700?1.5:1);
+      const u=Math.max(0,Math.min(1,sl.x)), xmax=Z?Z.sideL:W;
+      let x=u*xmax, h0=hzAt(g,x)+H*.03, y=h0+(.04+.96*sl.d)*(H-h0);
+      if(Z && y>Z.cardT-10){ x=Z.cardR+u*(xmax-Z.cardR); h0=hzAt(g,x)+H*.03; y=h0+(.04+.96*sl.d)*(H-h0); }
+      const sc=(.28+sl.d*.95)*k*(W<700?1.5:1);
       cx.fillStyle="rgba(0,0,0,.28)";cx.beginPath();cx.ellipse(x,y,26*sc*gr,6*sc*gr,0,0,7);cx.fill();
       pine(x,y,sc,gr*(.85+sl.v*.3),sl.v);
       if(i===MY_INDEX && t<MY_UNTIL) mine={x,y,sc};
@@ -442,6 +453,7 @@ if(EKRAN){
   try{ new QRCode($("qrbox"),{text:url,width:480,height:480,correctLevel:QRCode.CorrectLevel.M}); }catch(e){ $("qrbox").textContent=url; }
 }
 
+zones();
 load();
 setInterval(load, EKRAN?15000:45000);
 </script>
